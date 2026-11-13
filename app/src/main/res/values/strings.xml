@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OK クロード</string>
+    <string name="a11y_desc">「OK クロード」と言うとClaudeアプリを開き、音声モードの波形ボタンを代わりにタップします。Claudeアプリ以外の画面は読みません。</string>
+</resources>

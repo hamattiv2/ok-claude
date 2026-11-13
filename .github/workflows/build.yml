@@ -1,0 +1,65 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      # 日本語の音声認識モデル（約50MB、端末内で動く）
+      - name: Cache Vosk model
+        id: model-cache
+        uses: actions/cache@v4
+        with:
+          path: vosk-model
+          key: vosk-model-small-ja-0.22
+
+      - name: Download Vosk model
+        if: steps.model-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -L --fail -o model.zip https://alphacephei.com/vosk/models/vosk-model-small-ja-0.22.zip
+          unzip -q model.zip
+          mv vosk-model-small-ja-0.22 vosk-model
+
+      - name: Put model into assets
+        run: |
+          mkdir -p app/src/main/assets
+          rm -rf app/src/main/assets/model-ja
+          cp -r vosk-model app/src/main/assets/model-ja
+          echo "vosk-small-ja-0.22" > app/src/main/assets/model-ja/uuid
+
+      - name: Build
+        run: gradle assembleDebug --no-daemon
+
+      - name: Rename APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk ok-claude.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ok-claude-apk
+          path: ok-claude.apk
+
+      # スマホから落としやすいように「Releases」にも置く
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: OK クロード build ${{ github.run_number }}
+          make_latest: true
+          files: ok-claude.apk
